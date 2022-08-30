@@ -9,7 +9,7 @@ add_subdirectory(extern/plibsys)
 
 include_directories(include)
 
-add_library(Minecraft-server-query src/main.c src/error.c)
+add_library(Minecraft-server-query STATIC src/main.c src/error.c)
 
 if (CMAKE_C_COMPILER_ID STREQUAL "GNU")
     target_link_options(Minecraft-server-query PRIVATE -Wl,--gc-sections)
@@ -30,7 +30,7 @@ target_link_libraries(Minecraft-server-query plibsys)
 
 option(BUILD_EXAMPLE_IMPLEMENTATION "Build example" ON)
 if (BUILD_EXAMPLE_IMPLEMENTATION)
-    message("Build example")
+    message(STATUS "Build example")
     add_executable(msq_example example/main.c)
     if (CMAKE_C_COMPILER_ID STREQUAL "GNU")
         target_link_options(msq_example PRIVATE -Wl,--gc-sections -s)
