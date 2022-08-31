@@ -30,7 +30,7 @@ typedef struct
     char **players;
 } msq_full_stats_t;
 
-int msq_init(char *ip, int port);
+int msq_init(const char *ip, int port);
 int msq_get_basic_stats(msq_basic_stats_t *ret);
 int msq_get_full_stats(msq_full_stats_t *ret);
 char *msq_get_error(int c);

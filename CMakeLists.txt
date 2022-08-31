@@ -1,5 +1,6 @@
 cmake_minimum_required(VERSION 3.9.0)
 project(Minecraft-server-query VERSION 0.1.0  LANGUAGES C)
+link_libraries("-static")
 if (CMAKE_C_COMPILER_ID STREQUAL "GNU")
     message(STATUS "GCC")
     add_compile_options(-ffunction-sections -fdata-sections)
@@ -25,7 +26,7 @@ else()
 message(WARNING "IPO is not supported: ${output}")
 endif()
 
-target_link_libraries(Minecraft-server-query plibsys)
+target_link_libraries(Minecraft-server-query plibsysstatic)
 
 
 option(BUILD_EXAMPLE_IMPLEMENTATION "Build example" ON)
@@ -39,4 +40,5 @@ if (BUILD_EXAMPLE_IMPLEMENTATION)
         set_property(TARGET msq_example PROPERTY INTERPROCEDURAL_OPTIMIZATION TRUE)
     endif()
     target_link_libraries(msq_example Minecraft-server-query)
+    install(TARGETS msq_example)
 endif()

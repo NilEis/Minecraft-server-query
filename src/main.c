@@ -51,7 +51,7 @@ int check_for_endianness()
     return (int)*c;
 }
 
-int msq_init(char *ip, int port)
+int msq_init(const char *ip, int port)
 {
     if (init != 0)
     {
