@@ -9,7 +9,9 @@ static char *errors[] =
         "Could not send handshake",
         "Could not receive handshake",
         "Could not send request for basic stats",
-        "Could not receive basic stats"};
+        "Could not receive basic stats",
+        "Could not send request for full stats",
+        "Could not receive full stats"};
 
 char *msq_get_error(int c)
 {

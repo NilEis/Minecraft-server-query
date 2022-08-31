@@ -7,6 +7,27 @@
 #define SWAP_U32(x) ((((x) >> 24) & 0xff) | (((x) << 8) & 0xff0000) | (((x) >> 8) & 0xff00) | (((x) << 24) & 0xff000000))
 #define SWAP_I16(x) (((x) << 8) | (((x) >> 8) & 0xFF))
 #define SWAP_U16(x) (((x) << 8) | ((x) >> 8))
+#define PARSE_KEY(x)                \
+    do                              \
+    {                               \
+        i += len + 1;               \
+        len = strlen(&response[i]); \
+        i += len + 1;               \
+        len = strlen(&response[i]); \
+        x = (char *)malloc(len+1);    \
+        strcpy(x, &response[i]);    \
+    } while (0);
+
+#define PARSE_KEY_SCANF(x, f)              \
+    do                                     \
+    {                                      \
+        i += len + 1;                      \
+        len = strlen(&response[i]);        \
+        i += len + 1;                      \
+        len = strlen(&response[i]);        \
+        sscanf(&response[i], "%" f, &(x)); \
+    } while (0);
+
 #ifndef NDEBUG
 #define LOG(x, ...) printf(x, __VA_ARGS__)
 #else
@@ -118,9 +139,7 @@ REQUEST:
         }
         goto REQUEST;
     }
-    int start = 5;
     int i = 5;
-    // while (i < RESPONSE_BUFFER_SIZE)
     size_t len = strlen(&response[i]);
     ret->MoTD = (char *)malloc(len + 1);
     strcpy(ret->MoTD, &response[i]);
@@ -150,6 +169,109 @@ REQUEST:
     strcpy(ret->hostip, &response[i]);
     return 0;
 #undef RESPONSE_BUFFER_SIZE
+}
+
+int msq_get_full_stats(msq_full_stats_t *ret)
+{
+#define RESPONSE_BUFFER_SIZE 256
+    pchar send[] = {0xFE, 0xFD,
+                    0x00, 0xFF & (SESSION_ID >> 24), 0xFF & (SESSION_ID >> 16), 0xFF & (SESSION_ID >> 8), 0xFF & SESSION_ID,
+                    0xFF & (challenge_token >> 24), 0xFF & (challenge_token >> 16), 0xFF & (challenge_token >> 8), 0xFF & challenge_token,
+                    0x00, 0x00, 0x00, 0x00};
+    int send_length = sizeof(send);
+    int lock = 0;
+#define RESPONSE_BUFFER_SIZE 1024
+REQUEST:
+    if (p_socket_send(sock, send, send_length, NULL) == -1)
+    {
+        return 9;
+    }
+    pchar response[RESPONSE_BUFFER_SIZE] = {0};
+    if (p_socket_receive(sock, response, sizeof(response), NULL) == -1)
+    {
+        if (lock)
+        {
+            return 10;
+        }
+        lock = 1;
+        int ret = __handshake();
+        if (ret != 0)
+        {
+            return ret;
+        }
+        goto REQUEST;
+    }
+    int i = 16;
+    size_t len = strlen(&response[i]);
+    i += len + 1;
+    len = strlen(&response[i]);
+    ret->hostname = (char *)malloc(len+1);
+    strcpy(ret->hostname, &response[i]);
+    PARSE_KEY(ret->game_type);
+    PARSE_KEY(ret->game_id);
+    PARSE_KEY(ret->version);
+    PARSE_KEY(ret->plugins);
+    PARSE_KEY(ret->map);
+    PARSE_KEY_SCANF(ret->num_players, SCNu32);
+    PARSE_KEY_SCANF(ret->max_players, SCNu32);
+    PARSE_KEY_SCANF(ret->hostport, SCNu16);
+    PARSE_KEY(ret->hostip);
+    i += len + 12;
+    ret->players = (char **)malloc(ret->num_players * sizeof(char *));
+    for (int p = 0; p < ret->num_players; p++)
+    {
+        len = strlen(&response[i]);
+        ret->players[p] = (char *)malloc(len+1);
+        strcpy(ret->players[p], &response[i]);
+        i += len + 1;
+    }
+#undef RESPONSE_BUFFER_SIZE
+    return 0;
+}
+
+void msq_print_basic_stats(msq_basic_stats_t *s)
+{
+    printf("MoTD: %s\n", s->MoTD);
+    printf("gametype: %s\n", s->gametype);
+    printf("map: %s\n", s->map);
+    printf("num_players: %" PRIi32 "\n", s->num_players);
+    printf("max_players: %" PRIi32 "\n", s->max_players);
+    printf("hostport: %" PRIu16 "\n", s->hostport);
+    printf("hostip: %s\n", s->hostip);
+}
+
+void msq_print_full_stats(msq_full_stats_t *s)
+{
+    printf("hostname: %s\n", s->hostname);
+    printf("game_type: %s\n", s->game_type);
+    printf("game_id: %s\n", s->game_id);
+    printf("version: %s\n", s->version);
+    printf("plugins: %s\n", s->plugins);
+    printf("map: %s\n", s->map);
+    printf("num_players: %" PRIi32 "\n", s->num_players);
+    printf("max_players: %" PRIi32 "\n", s->max_players);
+    printf("hostport: %" PRIu16 "\n", s->hostport);
+    printf("hostip: %s\n", s->hostip);
+    printf("players:\n");
+    for (int i = 0; i < s->num_players; i++)
+    {
+        printf("\t%s\n", s->players[i]);
+    }
+}
+void msq_free_full_stats(msq_full_stats_t *p)
+{
+    free(p->hostname);
+    free(p->game_type);
+    free(p->game_id);
+    free(p->version);
+    free(p->plugins);
+    free(p->map);
+    free(p->hostip);
+    for (int i = 0; i < p->num_players; i++)
+    {
+        free(p->players[i]);
+    }
+    free(p->players);
 }
 
 void msq_free_basic_stats(msq_basic_stats_t *p)
