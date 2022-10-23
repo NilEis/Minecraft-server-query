@@ -55,8 +55,8 @@ There are two requests that can be made
     {
         //If the request was successful, print the stats
         //and free allocated memory
-        msq_print_basic_stats(&full_stats_struct);
-        msq_free_basic_stats(&full_stats_struct);
+        msq_print_full_stats(&full_stats_struct);
+        msq_free_full_stats(&full_stats_struct);
     }
 ```
 #### After usage
